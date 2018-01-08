@@ -1,0 +1,4 @@
+﻿There are some known kernel exploitation techniques helping to solve this problem. You can refer to:
+1) keenjoy95's "A New CVE-2015-0057 Exploit Technology" on BlackHat Asia 2016;
+2) Peter&Lu's "This Time Font hunt you down in 4 bytes" on REcon 2015;
+or 3) j00ru's "One font vulnerability to rule them all" on REcon 2015.

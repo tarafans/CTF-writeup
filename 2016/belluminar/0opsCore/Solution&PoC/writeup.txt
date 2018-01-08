@@ -1,0 +1,13 @@
+0opsCore.sys is a vulnerable windows kernel driver. It has some handlers and the user can open the driver in the user space and issue read/write/ioctl/query info/set info to the driver.
+
+Mainly, the driver can be used to create an core object which has an internal array(m_bitmap) inside. The user can destroy the core object created before and also read/write the data stored inside the m_bitmap buffer belonging to the core object.
+
+There is a race condition between the core creation routine and the core deletion routine as they use different locks. As a result, we can first insert a core, and then try to insert another core but meanwhile destroy the first core. The internal bitmap of the first core will be freed, and its m_bitmap pointer becomes dangling. The second core will be inserted into a map. And then,
+
+std::swap(head->m_bitmap, core->m_bitmap);
+
+This will assign a dangling m_bitmap pointer to the second core's m_bitmap pointer and that leads to use-after-free. Fill in the space once occupied by the m_bitmap(size: 0x1000) and use the read/write function of the driver to directly leak/corrupt a kernel object.
+
+Here in PoC, we use a public techs introduced by Peter Hlavaty from KeenLab on REcon 2015. We spray gdi bitmap objects and make them take over the spaces once for the freed m_bitmap buffer. And then we can corrupt the gdi bitmap object to achieve arbitrary memory read and write primitive in the kernel context. After that, we locate our token, steal the SYSTEM token from a high privilege process and achieve a privilege escalation. Finally we pop up a SYSTEM cmd window.
+
+

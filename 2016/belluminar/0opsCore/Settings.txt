@@ -1,0 +1,24 @@
+This is a Windows kernel Pwnable. The players are required to exploit the vulnerabilities inside the installed driver 0opsCore.sys and achieve a privilege escalation.
+
+1. Create a win10 VM instance, and update the system to the latest version. (Current OS Build: 10586.318)
+There should be administrator user created during installation. Name it as `admin`.
+2. Create a new user `ctf` with a designated password. Note that this user is for players.
+3. Install the OpenSSH server to let the `ctf` user login onto the machine.
+The OpenSSH server install package is at http://www.mls-software.com/opensshd.html.
+4. Put the driver file 0opsCore.sys under C:\
+Put the flag file flag.txt under under C:\users\admin\. (It cannot be accessed by the `ctf` user).
+5. Following the steps here 
+http://answers.microsoft.com/en-us/insider/forum/insider_wintp-insider_devices/how-do-i-disable-driver-signature-enforcement-win/a53ec7ca-bdd3-4f39-a3af-3bd92336d248 
+to disable the driver signature enforcement on win10.
+After login into the system, run sign.bat to self-sign the driver C:\0opsCore.sys. Note that you can install SDK for win7 to get makecert.exe and signtool.exe.
+6. Use the provided tool under folder InstDrv to install the driver. 
+Put `C:\0opsCore.sys` in the textbox, click install and then click start.
+Note that Step 4, 5 and 6 need to be done under the administrator privilege.
+
+Here is the account information for our provided VM image.
+admin: j9289rb%quvu1$0!jio@
+ctf: windowskernel@belluminar
+
+The flag is flag{R4ce_C0nd1tion_1n_w1nd0ws_k3rn3l_i5_fuNNNNNNN}.
+
+As this is a kernel problem, every team should have its own target win10 VM. An initial state should be reserved in order to return back quickly when the machine BSOD, since the signature setting will be lost when the machine restarts.
