@@ -87,26 +87,3 @@ sc = (
 io.write(sc)
 
 io.interact()
-
-
-
-
-	
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
